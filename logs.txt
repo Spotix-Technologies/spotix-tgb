@@ -1,0 +1,9 @@
+.LOG
+
+10:28 AM 4/11/2026
+[v1.0.0]
+So I just began this bot yesterday and deploying today. MERLIN!
+
+## Features
+- Added listeners for payout and ticket purchase
+- Added payout and event stats access functionalities

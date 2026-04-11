@@ -1,0 +1,23 @@
+{
+  "name": "spotix-tg-bot",
+  "version": "1.0.0",
+  "description": "Spotix Telegram Bot integration for Fastify",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/server.ts",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@fastify/formbody": "^7.4.0",
+    "dotenv": "^16.6.1",
+    "fastify": "^5.8.4",
+    "firebase-admin": "^10.3.0",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  }
+}
