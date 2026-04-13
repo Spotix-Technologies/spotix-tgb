@@ -12,14 +12,14 @@ import { getLoadingMessage } from '../../services/loading';
  *
  * callback_data encoding:
  *   wd_event:<eventId>                     — user selected an event
- *   wd_date:<eventId>:<date>:<amount>      — user selected a date
- *   wd_confirm:<eventId>:<date>:<amount>   — user confirmed payout
+ *   wd_date:<eventId>:<date>:<ticketSales>      — user selected a date
+ *   wd_confirm:<eventId>:<date>:<ticketSales>   — user confirmed payout
  */
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-function formatMoney(amount: any): string {
-  return `₦${Number(amount ?? 0).toLocaleString('en-NG')}`;
+function formatMoney(ticketSales: any): string {
+  return `₦${Number(ticketSales ?? 0).toLocaleString('en-NG')}`;
 }
 
 async function resolveUser(chatId: string) {
@@ -157,7 +157,7 @@ export function registerWithdrawCommand() {
       for (const doc of sorted) {
         const date = doc.id;
         const data = doc.data();
-        const amount = data.totalRevenue ?? data.amount ?? 0;
+        const ticketSales = data.totalRevenue ?? data.ticketSales ?? 0;
 
         const updatedAt = data.updatedAt ? new Date(data.updatedAt) : new Date(`${date}T00:00:00`);
         const diffHours = (now - updatedAt.getTime()) / (1000 * 60 * 60);
@@ -177,17 +177,17 @@ export function registerWithdrawCommand() {
           };
           statusLine = `${statusEmoji[existingStatus] || '•'} Payout ${existingStatus}`;
           if (existingStatus === 'failed') {
-            button = { text: '🔁 Retry', callback_data: `wd_date:${eventId}:${date}:${amount}` };
+            button = { text: '🔁 Retry', callback_data: `wd_date:${eventId}:${date}:${ticketSales}` };
           }
         } else if (!isReady) {
           statusLine = `⏱ Available in ${h}h ${m}m`;
         } else {
           statusLine = `✅ Ready to withdraw`;
-          button = { text: '💸 Withdraw', callback_data: `wd_date:${eventId}:${date}:${amount}` };
+          button = { text: '💸 Withdraw', callback_data: `wd_date:${eventId}:${date}:${ticketSales}` };
         }
 
         await ctx.reply(
-          `📅 <b>${date}</b> — ${formatMoney(amount)}\n${statusLine}`,
+          `📅 <b>${date}</b> — ${formatMoney(ticketSales)}\n${statusLine}`,
           {
             parse_mode: 'HTML',
             reply_markup: button
@@ -204,8 +204,8 @@ export function registerWithdrawCommand() {
 
   // ── Step 3: date selected — validate and show confirm button ──────────────
   bot.action(/^wd_date:([^:]+):([^:]+):([^:]+)$/, async (ctx) => {
-    const [eventId, date, amountStr] = [ctx.match[1], ctx.match[2], ctx.match[3]];
-    const amount = Number(amountStr);
+    const [eventId, date, ticketSalesStr] = [ctx.match[1], ctx.match[2], ctx.match[3]];
+    const ticketSales = Number(ticketSalesStr);
     const chatId = String(ctx.chat?.id);
 
     await ctx.answerCbQuery();
@@ -250,7 +250,7 @@ export function registerWithdrawCommand() {
       const restrictedDateSnap = await db
         .collection('admin').doc('global').collection('restrictedDate').doc(date).get();
       if (restrictedDateSnap.exists && restrictedDateSnap.data()!.isRestricted === true) {
-        return ctx.reply(`🚫 ${restrictedDateSnap.data()!.reason ?? `Payouts for ${date} are currently restricted.`}`);
+        return ctx.reply(`🚫 We are currently not processing payouts on ${date} because ${restrictedDateSnap.data()!.reason ?? `🚫 Payouts for ${date} are currently not being processed.`}`);
       }
 
       // Restricted day of week
@@ -258,7 +258,7 @@ export function registerWithdrawCommand() {
       const restrictedDaySnap = await db
         .collection('admin').doc('global').collection('restrictedDays').doc(txnDayOfWeek).get();
       if (restrictedDaySnap.exists && restrictedDaySnap.data()!.isRestricted === true) {
-        return ctx.reply(`🚫 ${restrictedDaySnap.data()!.reason ?? `Payouts for ${txnDayOfWeek}s are currently restricted.`}`);
+        return ctx.reply(`🚫 We are currently not processing payouts on ${txnDayOfWeek}s as ${restrictedDaySnap.data()!.reason ?? `Payouts for ${txnDayOfWeek}s are currently restricted.`}`);
       }
 
       // Primary payout method
@@ -293,13 +293,13 @@ export function registerWithdrawCommand() {
         `<b>💸 Confirm Withdrawal</b>\n\n` +
         `<b>Event:</b> ${event.eventName}\n` +
         `<b>Date:</b> ${date}\n` +
-        `<b>Amount:</b> ${formatMoney(amount)}\n` +
+        `<b>Amount:</b> ${formatMoney(ticketSales)}\n` +
         `<b>To:</b> ${primaryMethod.bankName || 'Bank'} — ${maskedAccount} (${primaryMethod.accountName || ''})`,
         {
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [[
-              { text: '✅ Confirm & Withdraw', callback_data: `wd_confirm:${eventId}:${date}:${amount}` },
+              { text: '✅ Confirm & Withdraw', callback_data: `wd_confirm:${eventId}:${date}:${ticketSales}` },
             ]],
           },
         }
@@ -312,8 +312,8 @@ export function registerWithdrawCommand() {
 
   // ── Step 4: confirmed — submit payout ─────────────────────────────────────
   bot.action(/^wd_confirm:([^:]+):([^:]+):([^:]+)$/, async (ctx) => {
-    const [eventId, date, amountStr] = [ctx.match[1], ctx.match[2], ctx.match[3]];
-    const amount = Number(amountStr);
+    const [eventId, date, ticketSalesStr] = [ctx.match[1], ctx.match[2], ctx.match[3]];
+    const ticketSales = Number(ticketSalesStr);
     const chatId = String(ctx.chat?.id);
 
     await ctx.answerCbQuery();
@@ -327,7 +327,7 @@ export function registerWithdrawCommand() {
       const response = await fetch(`${apiUrl}/payouts/initiate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.userId, eventId, date, amount }),
+        body: JSON.stringify({ userId: user.userId, eventId, date, ticketSales }),
       });
 
       if (!response.ok) {

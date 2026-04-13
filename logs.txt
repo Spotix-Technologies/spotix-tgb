@@ -7,3 +7,9 @@ So I just began this bot yesterday and deploying today. MERLIN!
 ## Features
 - Added listeners for payout and ticket purchase
 - Added payout and event stats access functionalities
+
+
+9:49 PM 4/13/2026
+[v1.0.1]
+So yeah in v1.0.0, I actually made a snapshot that kept listening for changes in payouts and attendees cos I didn't have strength to build another endpoint. Turns out it was milking my db so here's the fix. I deleted them and made them functions
+

@@ -4,8 +4,8 @@ dotenv.config();
 import Fastify from 'fastify';
 import { bot } from './telegram/bot';
 import { registerAllCommands } from './telegram/index';
-import { startAttendeeListener } from './listeners/attendeeListener';
-import { startPayoutListener } from './listeners/payoutListener';
+// import { startAttendeeListener } from './listeners/attendeeListener';
+// import { startPayoutListener } from './listeners/payoutListener';
 
 // Firebase must be initialized before any db usage
 import './firebase';
@@ -33,7 +33,7 @@ async function bootstrap() {
 
   // 4. Start Fastify
   await app.listen({ port: PORT, host: '0.0.0.0' });
-  console.log(`[Server] Fastify listening on port ${PORT}`);
+  console.log(`[Server] Server listening on port ${PORT}`);
 
   // 5. Register the webhook URL with Telegram once at boot
   if (SERVER_URL) {
@@ -44,10 +44,10 @@ async function bootstrap() {
   }
 
   // 6. Start Firestore real-time listeners
-  startAttendeeListener();
-  startPayoutListener();
+  // startAttendeeListener();
+  // startPayoutListener();
 
-  console.log('[Spotix Bot] All systems live ✅');
+  console.log('[Spotix Bot] All systems live are a go!');
 }
 
 bootstrap().catch((err) => {
